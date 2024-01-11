@@ -31,7 +31,22 @@ impl Searcher {
             case_sensitive,
         }
     }
-    pub fn search(&self, content: String) -> Vec<Match> {
+    pub fn naive_search(&self, content: &str) -> Vec<Match> {
+        let mut result = vec![];
+        if self.pattern.len() == 0 {
+            return result;
+        }
+        let mut position = 0;
+        let content = content.as_bytes();
+        while position + self.pattern.len() <= content.len() {
+            if content[position..(position + self.pattern.len())] == self.pattern {
+                result.push(Match{position});
+            }
+            position += 1;
+        }
+        result
+    }
+    pub fn search(&self, content: &str) -> Vec<Match> {
         let mut result = vec![];
         if self.pattern.len() == 0 {
             return result;
@@ -77,7 +92,7 @@ mod tests {
     #[test]
     fn basic_search() {
         let searcher = Searcher::create("bc".into());
-        let mats = searcher.search("abcd".into());
+        let mats = searcher.naive_search("abcd".into());
         assert_eq!(mats.len(), 1);
         let mat1 = mats.first().unwrap();
         assert_eq!(mat1.position, 1);
@@ -86,28 +101,28 @@ mod tests {
     #[test]
     fn no_matches() {
         let searcher = Searcher::create("bd".into());
-        let mats = searcher.search("abcd".into());
+        let mats = searcher.naive_search("abcd".into());
         assert_eq!(mats.len(), 0);
     }
 
     #[test]
     fn empty_content() {
         let searcher = Searcher::create("abc".into());
-        let mats = searcher.search("".into());
+        let mats = searcher.naive_search("".into());
         assert_eq!(mats.len(), 0);
     }
 
     #[test]
     fn search_string_too_long() {
         let searcher = Searcher::create("abcdefgh".into());
-        let mats = searcher.search("abc".into());
+        let mats = searcher.naive_search("abc".into());
         assert_eq!(mats.len(), 0);
     }
 
     #[test]
     fn two_matches() {
         let searcher = Searcher::create("abc".into());
-        let mats = searcher.search("xabc123abcx".into());
+        let mats = searcher.naive_search("xabc123abcx".into());
         assert_eq!(mats.len(), 2);
     }
 
@@ -115,7 +130,7 @@ mod tests {
     fn longer_test() {
         let content = "Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet. Nisi anim cupidatat excepteur officia. Reprehenderit nostrud nostrud ipsum Lorem est aliquip amet voluptate voluptate dolor minim nulla est proident. Nostrud officia pariatur ut officia. Sit irure elit esse ea nulla sunt ex occaecat reprehenderit commodo officia dolor Lorem duis laboris cupidatat officia voluptate. Culpa proident adipisicing id nulla nisi laboris ex in Lorem sunt duis officia eiusmod. Aliqua reprehenderit commodo ex non excepteur duis sunt velit enim. Voluptate laboris sint cupidatat ullamco ut ea consectetur et est culpa et culpa duis.";
         let searcher = Searcher::create("dolor".into());
-        let mats = searcher.search(content.into());
+        let mats = searcher.naive_search(content);
         let content = content.as_bytes();
         for mat in mats {
             assert_eq!(
