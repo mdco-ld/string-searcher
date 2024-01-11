@@ -1,4 +1,8 @@
+mod char_lookup;
+
 use std::cmp::min;
+
+use self::char_lookup::CharLookup;
 
 #[derive(PartialEq, Debug)]
 pub struct Match {
@@ -7,20 +11,16 @@ pub struct Match {
 
 pub struct Searcher {
     pattern: Vec<u8>,
-    char_lkup: Box<[bool; 256]>,
+    char_lkup: char_lookup::CharLookup,
     case_sensitive: bool,
 }
 
 impl Searcher {
     pub fn create(pattern: String) -> Self {
-        let pattern = pattern.as_bytes().to_owned();
-        let mut char_lkup = Box::new([false; 256]);
-        for ch in pattern.iter() {
-            char_lkup[*ch as usize] = true;
-        }
+        let pattern = pattern.as_bytes();
         Self {
-            pattern,
-            char_lkup,
+            pattern: pattern.to_owned(),
+            char_lkup: CharLookup::from(pattern),
             case_sensitive: true,
         }
     }
@@ -40,7 +40,7 @@ impl Searcher {
         let content = content.as_bytes();
         while position + self.pattern.len() <= content.len() {
             if content[position..(position + self.pattern.len())] == self.pattern {
-                result.push(Match{position});
+                result.push(Match { position });
             }
             position += 1;
         }
@@ -65,23 +65,31 @@ impl Searcher {
         result
     }
     fn search_position(&self, content: &[u8], position: usize) -> Option<Vec<Match>> {
-        let start = position + 1 - self.pattern.len();
-        let mut result = None;
-        for i in start..min(position + 1, content.len() - self.pattern.len()) {
-            if content[i..(i + self.pattern.len())] == self.pattern {
-                if !result.is_some() {
-                    result = Some(vec![]);
+        let mut result: Option<Vec<Match>> = None;
+        for i in self.char_lkup.get_positions(content[position]) {
+            if i + self.pattern.len() <= content.len()
+                && self.is_match_at_pos(content, position - i)
+            {
+                if let Some(v) = &mut result {
+                    v.push(Match {
+                        position: position - i,
+                    });
+                } else {
+                    result = Some(vec![Match {
+                        position: position - i,
+                    }]);
                 }
-                result = result.map(|mut v| {
-                    v.push(Match { position: i });
-                    v
-                });
             }
         }
         result
     }
+
+    fn is_match_at_pos(&self, text: &[u8], position: usize) -> bool {
+        text[position..(position + self.pattern.len())] == self.pattern
+    }
+
     fn contains(&self, c: u8) -> bool {
-        self.char_lkup[c as usize]
+        self.char_lkup.contains(c)
     }
 }
 
@@ -124,7 +132,7 @@ mod tests {
         let searcher = Searcher::create("abc".into());
         let mats = searcher.naive_search("xabc123abcx".into());
         assert_eq!(mats.len(), 2);
-        assert_eq!(mats, vec![Match{position: 1}, Match{position: 7}]);
+        assert_eq!(mats, vec![Match { position: 1 }, Match { position: 7 }]);
     }
 
     #[test]
