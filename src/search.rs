@@ -7,19 +7,27 @@ pub struct Match {
 
 pub struct Searcher {
     pattern: Vec<u8>,
+    char_lkup: Box<[bool; 256]>,
     case_sensitive: bool,
 }
 
 impl Searcher {
     pub fn create(pattern: String) -> Self {
+        let pattern = pattern.as_bytes().to_owned();
+        let mut char_lkup = Box::new([false; 256]);
+        for ch in pattern.iter() {
+            char_lkup[*ch as usize] = true;
+        }
         Self {
-            pattern: pattern.as_bytes().to_owned(),
+            pattern,
+            char_lkup,
             case_sensitive: true,
         }
     }
     pub fn case_sensitive(self, case_sensitive: bool) -> Self {
         Self {
             pattern: self.pattern,
+            char_lkup: self.char_lkup,
             case_sensitive,
         }
     }
@@ -44,7 +52,7 @@ impl Searcher {
     fn search_position(&self, content: &[u8], position: usize) -> Option<Vec<Match>> {
         let start = position + 1 - self.pattern.len();
         let mut result = None;
-        for i in start..min(position + 1, content.len()-self.pattern.len()) {
+        for i in start..min(position + 1, content.len() - self.pattern.len()) {
             if content[i..(i + self.pattern.len())] == self.pattern {
                 if !result.is_some() {
                     result = Some(vec![]);
@@ -58,12 +66,7 @@ impl Searcher {
         result
     }
     fn contains(&self, c: u8) -> bool {
-        for ch in &self.pattern {
-            if c == *ch {
-                return true;
-            }
-        }
-        return false;
+        self.char_lkup[c as usize]
     }
 }
 
@@ -115,7 +118,10 @@ mod tests {
         let mats = searcher.search(content.into());
         let content = content.as_bytes();
         for mat in mats {
-            assert_eq!("dolor".as_bytes(), &content[mat.position..(mat.position+5)]);
+            assert_eq!(
+                "dolor".as_bytes(),
+                &content[mat.position..(mat.position + 5)]
+            );
         }
     }
 }
