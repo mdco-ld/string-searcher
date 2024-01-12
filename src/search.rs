@@ -105,8 +105,8 @@ impl Searcher {
     }
     fn search_position(&self, content: &[u8], position: usize) -> Option<Vec<Match>> {
         let mut result: Option<Vec<Match>> = None;
-        for i in self.char_lkup.get_positions(content[position]) {
-            if i + self.pattern.len() <= content.len()
+        for i in self.char_lkup.get_positions(content[position]).iter().rev() {
+            if position - i + self.pattern.len() <= content.len()
                 && self.is_match_at_pos(content, position - i)
             {
                 if let Some(v) = &mut result {
@@ -192,8 +192,17 @@ mod tests {
 
     #[test]
     fn case_insensitive_basic() {
-        let searcher = SearchBuilder::from_pattern("AbCd").case_sensitive(false).build(); 
+        let searcher = SearchBuilder::from_pattern("AbCd")
+            .case_sensitive(false)
+            .build();
         let mats = searcher.search("123aBcd123");
-        assert_eq!(mats, vec![Match{position: 3}]);
+        assert_eq!(mats, vec![Match { position: 3 }]);
+    }
+
+    #[test]
+    fn random_test_1() {
+        let searcher = SearchBuilder::from_pattern("abcabc").build();
+        let mats = searcher.search("abcabcabc");
+        assert_eq!(mats, vec![Match { position: 0 }, Match { position: 3 }]);
     }
 }

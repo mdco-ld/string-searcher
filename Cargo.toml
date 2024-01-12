@@ -12,3 +12,7 @@ criterion = "0.5.1"
 [[bench]]
 name = "simple_benchmark"
 harness = false
+
+[[bench]]
+name = "case_insensitive"
+harness = false
